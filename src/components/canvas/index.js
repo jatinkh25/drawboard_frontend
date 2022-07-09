@@ -13,8 +13,11 @@ export default function Canvas() {
   const [isDrawing, setIsDrawing] = useState(false);
   const [selectedMode, setSelectedMode] = useState("pen");
   const [strokeWidth] = useState(4);
-  // const [penClick, setPenClick] = useState(false);
+  const [penClick, setPenClick] = useState(false);
   const [iconsClickedState, setIconsClickedState] = useState([true, false * 4]);
+
+  const width = window.innerWidth * 0.98;
+  const height = window.innerHeight * 0.95;
 
   const penSizes = [];
   for (let i = 2; i <= 20; ++i) {
@@ -22,10 +25,44 @@ export default function Canvas() {
   }
   useEffect(() => {
     const canvas = canvasRef.current;
+    canvas.width = window.innerWidth * 0.98;
+    canvas.height = window.innerHeight * 0.95;
     const context = canvas.getContext("2d");
     context.lineWidth = strokeWidth;
     contextRef.current = context;
   }, [strokeWidth]);
+
+  useEffect(() => {
+    if (!canvasRef || !canvasRef.current || !contextRef || !contextRef.current)
+      return;
+    const inMemCanvas = document.createElement("canvas");
+    const inMemCtx = inMemCanvas.getContext("2d");
+    inMemCanvas.width = canvasRef.current.width;
+    inMemCanvas.height = canvasRef.current.height;
+    inMemCtx.drawImage(canvasRef.current, 0, 0);
+    const canvas = canvasRef.current;
+    canvas.width = window.innerWidth * 0.98;
+    canvas.height = window.innerHeight * 0.95;
+    const dx = canvas.width - inMemCanvas.width;
+    const dy = canvas.height - inMemCanvas.height;
+
+    contextRef.current.lineWidth = strokeWidth;
+    if (dx > 0) {
+      contextRef.current.drawImage(
+        inMemCanvas,
+        dx > 0 ? dx / 2 : 0,
+        dy > 0 ? dy / 2 : 0
+      );
+    } else {
+      contextRef.current.drawImage(
+        inMemCanvas,
+        0,
+        0,
+        canvas.width,
+        canvas.height
+      );
+    }
+  }, [width, height, strokeWidth]);
 
   const startDrawing = (e) => {
     const { clientX, clientY } = e;
@@ -95,8 +132,6 @@ export default function Canvas() {
         onMouseDown={startDrawing}
         onMouseUp={endDrawing}
         onMouseMove={draw}
-        width={window.innerWidth * 0.98}
-        height={window.innerHeight * 0.95}
       ></canvas>
 
       {/* credits @images https://www.onlinewebfonts.com/icon */}
@@ -152,6 +187,7 @@ export default function Canvas() {
             fill={iconsClickedState[4] ? "#fff" : "#000"}
           />
         </div>
+        <button onClick={() => setPenClick(!penClick)}>Click</button>
       </div>
     </>
   );
