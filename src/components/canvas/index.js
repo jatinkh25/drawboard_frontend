@@ -12,6 +12,7 @@ import {
   adjustElementCoordinates,
   adjustmentRequired,
 } from "../../utils";
+import { useElementState } from "../../hooks/element_state";
 import "./styles.css";
 
 //webrtc
@@ -20,7 +21,7 @@ export default function Canvas() {
   const contextRef = useRef(null);
   const [selectedMode, setSelectedMode] = useState("pen");
   const [strokeWidth] = useState(4);
-  const [elements, setElements] = useState([]);
+  const [elements, setElements, undo, redo] = useElementState([]);
   const [iconsClickedState, setIconsClickedState] = useState([
     true,
     ...Array(4).fill(false),
@@ -41,6 +42,47 @@ export default function Canvas() {
     context.lineCap = "round";
     contextRef.current = context;
   }, [strokeWidth]);
+
+  //for resizing the canvas
+  useEffect(() => {
+    if (!canvasRef || !canvasRef.current || !contextRef || !contextRef.current)
+      return;
+
+    //creating a new canvas element and context for saving in memory
+    const inMemCanvas = document.createElement("canvas");
+    const inMemCtx = inMemCanvas.getContext("2d");
+
+    inMemCanvas.width = canvasRef.current.width;
+    inMemCanvas.height = canvasRef.current.height;
+
+    //saving the new canvas in memory as image
+    inMemCtx.drawImage(canvasRef.current, 0, 0);
+
+    const canvas = canvasRef.current;
+    canvas.width = window.innerWidth * 0.98;
+    canvas.height = window.innerHeight * 0.95;
+
+    const dx = canvas.width - inMemCanvas.width;
+    const dy = canvas.height - inMemCanvas.height;
+
+    contextRef.current.lineWidth = strokeWidth;
+
+    if (dx > 0) {
+      contextRef.current.drawImage(
+        inMemCanvas,
+        dx > 0 ? dx / 2 : 0,
+        dy > 0 ? dy / 2 : 0
+      );
+    } else {
+      contextRef.current.drawImage(
+        inMemCanvas,
+        0,
+        0,
+        canvas.width,
+        canvas.height
+      );
+    }
+  }, [width, height, strokeWidth]);
 
   //for rendering all elements present in elements array
   useLayoutEffect(() => {
@@ -96,46 +138,21 @@ export default function Canvas() {
     }
   }, [elements]);
 
-  //for resizing the canvas
   useEffect(() => {
-    if (!canvasRef || !canvasRef.current || !contextRef || !contextRef.current)
-      return;
-
-    //creating a new canvas element and context for saving in memory
-    const inMemCanvas = document.createElement("canvas");
-    const inMemCtx = inMemCanvas.getContext("2d");
-
-    inMemCanvas.width = canvasRef.current.width;
-    inMemCanvas.height = canvasRef.current.height;
-
-    //saving the new canvas in memory as image
-    inMemCtx.drawImage(canvasRef.current, 0, 0);
-
-    const canvas = canvasRef.current;
-    canvas.width = window.innerWidth * 0.98;
-    canvas.height = window.innerHeight * 0.95;
-
-    const dx = canvas.width - inMemCanvas.width;
-    const dy = canvas.height - inMemCanvas.height;
-
-    contextRef.current.lineWidth = strokeWidth;
-
-    if (dx > 0) {
-      contextRef.current.drawImage(
-        inMemCanvas,
-        dx > 0 ? dx / 2 : 0,
-        dy > 0 ? dy / 2 : 0
-      );
-    } else {
-      contextRef.current.drawImage(
-        inMemCanvas,
-        0,
-        0,
-        canvas.width,
-        canvas.height
-      );
-    }
-  }, [width, height, strokeWidth]);
+    const undoRedoFunction = (event) => {
+      if (event.ctrlKey) {
+        if (event.key === "z") {
+          undo();
+        } else if (event.key === "y") {
+          redo();
+        }
+      }
+    };
+    document.addEventListener("keydown", undoRedoFunction);
+    return () => {
+      document.removeEventListener("keydown", undoRedoFunction);
+    };
+  }, [undo, redo]);
 
   const onMouseDownHandler = (e) => {
     const { clientX, clientY } = e;
@@ -158,8 +175,10 @@ export default function Canvas() {
 
         if (element.position === "inside") {
           setAction("moving");
+          setElements(elements);
         } else {
           setAction("resizing");
+          setElements(elements);
         }
       }
       return;
@@ -178,50 +197,6 @@ export default function Canvas() {
     setElements([...elements, element]);
     // setSelectedElement(element);
     setAction("drawing");
-  };
-
-  const onMouseUpHandler = (e) => {
-    if (selectedElement === null) {
-      setAction("none");
-      return;
-    }
-    const index = selectedElement.id;
-    const { id, type } = elements[index];
-    if (
-      (action === "drawing" || action === "resizing") &&
-      adjustmentRequired(type)
-    ) {
-      const { x1, y1, x2, y2 } = adjustElementCoordinates(elements[index]);
-      updateElement({ id, x1, y1, x2, y2, type });
-    }
-    setAction("none");
-    setSelectedElement(null);
-  };
-
-  const updateElement = (element) => {
-    const elementsCopy = [...elements];
-    let id = element.id;
-    if (id === null || id === undefined) {
-      id = elements.length - 1;
-    }
-    const updatedElement = { ...elementsCopy[id], ...element };
-    const { x2, y2, type } = updatedElement;
-    switch (type) {
-      case "line":
-      case "rectangle":
-        elementsCopy[id] = updatedElement;
-        break;
-      case "pen":
-        elementsCopy[id].points = [
-          ...elementsCopy[id].points,
-          { x: x2, y: y2 },
-        ];
-        break;
-      default:
-        throw new Error(`Type not recognised: ${type}`);
-    }
-
-    setElements(elementsCopy);
   };
 
   const onMouseMoveHandler = (e) => {
@@ -270,6 +245,50 @@ export default function Canvas() {
       );
       updateElement({ id, x1, y1, x2, y2, type });
     }
+  };
+
+  const onMouseUpHandler = (e) => {
+    if (selectedElement === null) {
+      setAction("none");
+      return;
+    }
+    const index = selectedElement.id;
+    const { id, type } = elements[index];
+    if (
+      (action === "drawing" || action === "resizing") &&
+      adjustmentRequired(type)
+    ) {
+      const { x1, y1, x2, y2 } = adjustElementCoordinates(elements[index]);
+      updateElement({ id, x1, y1, x2, y2, type });
+    }
+    setAction("none");
+    setSelectedElement(null);
+  };
+
+  const updateElement = (element, overwriteLastElement = true) => {
+    const elementsCopy = [...elements];
+    let id = element.id;
+    if (id === null || id === undefined) {
+      id = elements.length - 1;
+    }
+    const updatedElement = { ...elementsCopy[id], ...element };
+    const { x2, y2, type } = updatedElement;
+    switch (type) {
+      case "line":
+      case "rectangle":
+        elementsCopy[id] = updatedElement;
+        break;
+      case "pen":
+        elementsCopy[id].points = [
+          ...elementsCopy[id].points,
+          { x: x2, y: y2 },
+        ];
+        break;
+      default:
+        throw new Error(`Type not recognised: ${type}`);
+    }
+
+    setElements(elementsCopy, overwriteLastElement);
   };
 
   const changeIconStateHandler = (idx) => {
