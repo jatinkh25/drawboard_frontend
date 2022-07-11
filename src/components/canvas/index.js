@@ -5,7 +5,13 @@ import { ReactComponent as Pen } from "../../assets/pen.svg";
 import { ReactComponent as Rectangle } from "../../assets/rectangle.svg";
 import { ReactComponent as Selection } from "../../assets/selection.svg";
 import { ReactComponent as Line } from "../../assets/line.svg";
-import { getElementAtCursor } from "../../utils";
+import {
+  getElementAtCursor,
+  getCursorForAction,
+  getResizedCoordinates,
+  adjustElementCoordinates,
+  adjustmentRequired,
+} from "../../utils";
 import "./styles.css";
 
 //webrtc
@@ -15,42 +21,15 @@ export default function Canvas() {
   const [selectedMode, setSelectedMode] = useState("pen");
   const [strokeWidth] = useState(4);
   const [elements, setElements] = useState([]);
-  const [iconsClickedState, setIconsClickedState] = useState([true, false * 4]);
+  const [iconsClickedState, setIconsClickedState] = useState([
+    true,
+    ...Array(4).fill(false),
+  ]);
   const [action, setAction] = useState("none");
   const [selectedElement, setSelectedElement] = useState(null);
-  // const [mousePos, setMousePos] = useState();
   const width = window.innerWidth * 0.98;
   const height = window.innerHeight * 0.95;
 
-  // useEffect(() => {
-  //   if (
-  //     !canvasRef ||
-  //     !canvasRef.current ||
-  //     !contextRef ||
-  //     !contextRef.current ||
-  //     !elements
-  //   )
-  //     return;
-  //   function setMousePosition(e) {
-  //     const { clientX, clientY } = e;
-  //     const boundingRect = canvasRef.current.getBoundingClientRect();
-
-  //     const x = clientX - boundingRect.left;
-  //     const y = clientY - boundingRect.top;
-  //     setMousePos({ x, y });
-  //   }
-
-  //   document
-  //     .querySelector("canvas")
-  //     .addEventListener("mousemove", setMousePosition);
-  //   return () => {
-  //     document
-  //       .querySelector("canvas")
-  //       .removeEventListener("mousemove", setMousePosition);
-  //   };
-  // }, []);
-
-  //for setting up canvas
   useEffect(() => {
     const canvas = canvasRef.current;
 
@@ -100,7 +79,7 @@ export default function Canvas() {
           contextRef.current.moveTo(element.x1, element.y1);
           contextRef.current.lineTo(element.x2, element.y2);
           break;
-        case "rect":
+        case "rectangle":
           contextRef.current.lineCap = "butt";
           contextRef.current.strokeRect(
             element.x1,
@@ -163,46 +142,60 @@ export default function Canvas() {
     const boundingRect = canvasRef.current.getBoundingClientRect();
 
     //getting mouse coordinates with respect to canvas
-    const x = clientX - boundingRect.left;
-    const y = clientY - boundingRect.top;
+    const mouseX = clientX - boundingRect.left;
+    const mouseY = clientY - boundingRect.top;
 
     if (selectedMode === "select") {
       //getting the element at the position of cursor
-      const element = getElementAtCursor(x, y, elements);
+      const element = getElementAtCursor(mouseX, mouseY, elements);
       if (element) {
         if (element.type === "pen") {
-          const xOffsets = element.points.map((point) => clientX - point.x);
-          const yOffsets = element.points.map((point) => clientY - point.y);
-          setSelectedElement({ ...element, xOffsets, yOffsets });
         } else {
-          const offsetX = x - element.x1;
-          const offsetY = y - element.y1;
+          const offsetX = mouseX - element.x1;
+          const offsetY = mouseY - element.y1;
           setSelectedElement({ ...element, offsetX, offsetY });
         }
 
         if (element.position === "inside") {
           setAction("moving");
+        } else {
+          setAction("resizing");
         }
       }
-
       return;
     }
 
     //comes here if element has to drawn
     contextRef.current.beginPath();
-    contextRef.current.moveTo(x, y);
-
+    contextRef.current.moveTo(mouseX, mouseY);
+    const element = {
+      id: elements.length,
+      x1: mouseX,
+      y1: mouseY,
+      type: selectedMode,
+    };
     //adding new element in the elements array
-    setElements([
-      ...elements,
-      { id: elements.length, x1: x, y1: y, type: selectedMode },
-    ]);
-
+    setElements([...elements, element]);
+    // setSelectedElement(element);
     setAction("drawing");
   };
 
   const onMouseUpHandler = (e) => {
+    if (selectedElement === null) {
+      setAction("none");
+      return;
+    }
+    const index = selectedElement.id;
+    const { id, type } = elements[index];
+    if (
+      (action === "drawing" || action === "resizing") &&
+      adjustmentRequired(type)
+    ) {
+      const { x1, y1, x2, y2 } = adjustElementCoordinates(elements[index]);
+      updateElement({ id, x1, y1, x2, y2, type });
+    }
     setAction("none");
+    setSelectedElement(null);
   };
 
   const updateElement = (element) => {
@@ -215,7 +208,7 @@ export default function Canvas() {
     const { x2, y2, type } = updatedElement;
     switch (type) {
       case "line":
-      case "rect":
+      case "rectangle":
         elementsCopy[id] = updatedElement;
         break;
       case "pen":
@@ -234,7 +227,6 @@ export default function Canvas() {
   const onMouseMoveHandler = (e) => {
     const { clientX, clientY } = e;
     const boundingRect = canvasRef.current.getBoundingClientRect();
-
     const x = clientX - boundingRect.left;
     const y = clientY - boundingRect.top;
 
@@ -243,16 +235,17 @@ export default function Canvas() {
       if (selectedMode === "select") {
         //changing the cursor if user is not drawing and is in select mode
         const element = getElementAtCursor(x, y, elements);
-        e.target.style.cursor = element ? "all-scroll" : "default";
+        e.target.style.cursor = element
+          ? getCursorForAction(element.position)
+          : "default";
       }
       return;
     }
 
     if (action === "drawing") {
       updateElement({ x2: x, y2: y });
-    } else {
-      const element = getElementAtCursor(x, y, elements);
-      e.target.style.cursor = element ? "all-scroll" : "default";
+    } else if (action === "moving") {
+      // const element = getElementAtCursor(x, y, elements);
       const { id, x1, x2, y1, y2, type, offsetX, offsetY } = selectedElement;
       const width = x2 - x1;
       const height = y2 - y1;
@@ -266,6 +259,16 @@ export default function Canvas() {
         y2: newY1 + height,
         type,
       });
+    } else {
+      //comes here if action === "resizing"
+      const { id, type, position, ...coordinates } = selectedElement;
+      const { x1, y1, x2, y2 } = getResizedCoordinates(
+        x,
+        y,
+        position,
+        coordinates
+      );
+      updateElement({ id, x1, y1, x2, y2, type });
     }
   };
 
@@ -285,7 +288,7 @@ export default function Canvas() {
         setSelectedMode("line");
         break;
       case 3:
-        setSelectedMode("rect");
+        setSelectedMode("rectangle");
         break;
       case 4:
         setSelectedMode("select");
@@ -334,7 +337,9 @@ export default function Canvas() {
         </div>
         <div
           className={
-            iconsClickedState[3] ? "svg_icon rect click" : "svg_icon rect"
+            iconsClickedState[3]
+              ? "svg_icon rectangle click"
+              : "svg_icon rectangle"
           }
           onClick={() => changeIconStateHandler(3)}
         >
