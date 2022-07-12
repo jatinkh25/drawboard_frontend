@@ -1,5 +1,6 @@
 // image credits @https://iconscout.com/icons & @https://www.onlinewebfonts.com/icon
 import React, { useRef, useEffect, useLayoutEffect, useState } from "react";
+import { getStroke } from "perfect-freehand";
 import { ReactComponent as Eraser } from "../../assets/eraser.svg";
 import { ReactComponent as Pen } from "../../assets/pen.svg";
 import { ReactComponent as Rectangle } from "../../assets/rectangle.svg";
@@ -11,6 +12,7 @@ import {
   getResizedCoordinates,
   adjustElementCoordinates,
   adjustmentRequired,
+  getSvgPathFromStroke,
 } from "../../utils";
 import { useElementState } from "../../hooks/element_state";
 import "./styles.css";
@@ -20,7 +22,7 @@ export default function Canvas() {
   const canvasRef = useRef(null);
   const contextRef = useRef(null);
   const [selectedMode, setSelectedMode] = useState("pen");
-  const [strokeWidth] = useState(4);
+  const [strokeWidth] = useState(3);
   const [elements, setElements, undo, redo] = useElementState([]);
   const [iconsClickedState, setIconsClickedState] = useState([
     true,
@@ -108,9 +110,19 @@ export default function Canvas() {
 
       switch (element.type) {
         case "pen":
-          contextRef.current.lineCap = "round";
-          contextRef.current.moveTo(element.x1, element.y1);
-          contextRef.current.lineTo(element.x2, element.y2);
+          // contextRef.current.lineCap = "round";
+          // contextRef.current.moveTo(element.points[0].x, element.points[0].y);
+          // for (let i = 1; i < element.points.length; ++i) {
+          //   contextRef.current.lineTo(element.points[i].x, element.points[i].y);
+          // }
+          const stroke = getStroke(element.points, {
+            size: 5,
+            thinning: 0.5,
+            smoothing: 0.5,
+            streamline: 0.5,
+          });
+          const pathData = getSvgPathFromStroke(stroke);
+          contextRef.current.fill(new Path2D(pathData));
           break;
         case "eraser":
           // contextRef.current.moveTo(element.x1, element.y1);
@@ -167,6 +179,9 @@ export default function Canvas() {
       const element = getElementAtCursor(mouseX, mouseY, elements);
       if (element) {
         if (element.type === "pen") {
+          const xOffsets = element.points.map((point) => mouseX - point.x);
+          const yOffsets = element.points.map((point) => mouseY - point.y);
+          setSelectedElement({ ...element, xOffsets, yOffsets });
         } else {
           const offsetX = mouseX - element.x1;
           const offsetY = mouseY - element.y1;
@@ -187,12 +202,21 @@ export default function Canvas() {
     //comes here if element has to drawn
     contextRef.current.beginPath();
     contextRef.current.moveTo(mouseX, mouseY);
-    const element = {
-      id: elements.length,
-      x1: mouseX,
-      y1: mouseY,
-      type: selectedMode,
-    };
+    let element = null;
+    if (selectedMode === "pen") {
+      element = {
+        id: elements.length,
+        points: [{ x: mouseX, y: mouseY }],
+        type: selectedMode,
+      };
+    } else {
+      element = {
+        id: elements.length,
+        x1: mouseX,
+        y1: mouseY,
+        type: selectedMode,
+      };
+    }
     //adding new element in the elements array
     setElements([...elements, element]);
     // setSelectedElement(element);
@@ -210,6 +234,7 @@ export default function Canvas() {
       if (selectedMode === "select") {
         //changing the cursor if user is not drawing and is in select mode
         const element = getElementAtCursor(x, y, elements);
+        console.log(element);
         e.target.style.cursor = element
           ? getCursorForAction(element.position)
           : "default";
@@ -218,22 +243,36 @@ export default function Canvas() {
     }
 
     if (action === "drawing") {
-      updateElement({ x2: x, y2: y });
+      const id = elements.length - 1;
+      updateElement({ id: id, x2: x, y2: y });
     } else if (action === "moving") {
       // const element = getElementAtCursor(x, y, elements);
-      const { id, x1, x2, y1, y2, type, offsetX, offsetY } = selectedElement;
-      const width = x2 - x1;
-      const height = y2 - y1;
-      const newX1 = clientX - boundingRect.left - offsetX;
-      const newY1 = clientY - boundingRect.top - offsetY;
-      updateElement({
-        id,
-        x1: newX1,
-        y1: newY1,
-        x2: newX1 + width,
-        y2: newY1 + height,
-        type,
-      });
+      if (selectedElement.type === "pen") {
+        const newPoints = selectedElement.points.map((_, index) => ({
+          x: x - selectedElement.xOffsets[index],
+          y: y - selectedElement.yOffsets[index],
+        }));
+        const elementsCopy = [...elements];
+        elementsCopy[selectedElement.id] = {
+          ...elementsCopy[selectedElement.id],
+          points: newPoints,
+        };
+        setElements(elementsCopy, true);
+      } else {
+        const { id, x1, x2, y1, y2, type, offsetX, offsetY } = selectedElement;
+        const width = x2 - x1;
+        const height = y2 - y1;
+        const newX1 = clientX - boundingRect.left - offsetX;
+        const newY1 = clientY - boundingRect.top - offsetY;
+        updateElement({
+          id,
+          x1: newX1,
+          y1: newY1,
+          x2: newX1 + width,
+          y2: newY1 + height,
+          type,
+        });
+      }
     } else {
       //comes here if action === "resizing"
       const { id, type, position, ...coordinates } = selectedElement;
@@ -261,16 +300,13 @@ export default function Canvas() {
       const { x1, y1, x2, y2 } = adjustElementCoordinates(elements[index]);
       updateElement({ id, x1, y1, x2, y2, type });
     }
-    setAction("none");
     setSelectedElement(null);
+    setAction("none");
   };
 
   const updateElement = (element, overwriteLastElement = true) => {
     const elementsCopy = [...elements];
     let id = element.id;
-    if (id === null || id === undefined) {
-      id = elements.length - 1;
-    }
     const updatedElement = { ...elementsCopy[id], ...element };
     const { x2, y2, type } = updatedElement;
     switch (type) {
@@ -285,7 +321,7 @@ export default function Canvas() {
         ];
         break;
       default:
-        throw new Error(`Type not recognised: ${type}`);
+        throw new Error("Selected Option not identified.");
     }
 
     setElements(elementsCopy, overwriteLastElement);
