@@ -13,8 +13,9 @@ export const useElementState = (initialState) => {
       setHistory(historyCopy);
     } else {
       const updatedState = [...history].slice(0, index + 1);
-      setHistory([...updatedState, newState]);
-      setIndex((prevState) => prevState + 1);
+      const updatedHist = [...updatedState, newState];
+      setHistory(updatedHist);
+      setIndex(index + 1);
     }
   };
   const undo = () => index > 0 && setIndex((prevState) => prevState - 1);

@@ -6,6 +6,7 @@ import { ReactComponent as Pen } from "../../assets/pen.svg";
 import { ReactComponent as Rectangle } from "../../assets/rectangle.svg";
 import { ReactComponent as Selection } from "../../assets/selection.svg";
 import { ReactComponent as Line } from "../../assets/line.svg";
+import { ReactComponent as Stroke } from "../../assets/stroke.svg";
 import {
   getElementAtCursor,
   getCursorForAction,
@@ -14,7 +15,8 @@ import {
   adjustmentRequired,
   getSvgPathFromStroke,
 } from "../../utils";
-import { useElementState } from "../../hooks/element_state";
+import { io } from "socket.io-client";
+import { useElementState } from "../../hooks/use-element-state";
 import "./styles.css";
 
 //webrtc
@@ -22,7 +24,10 @@ export default function Canvas() {
   const canvasRef = useRef(null);
   const contextRef = useRef(null);
   const [selectedMode, setSelectedMode] = useState("pen");
-  const [strokeWidth] = useState(3);
+  const [strokeWidth, setStrokeWidth] = useState(3);
+  const [strokeColor, setStrokeColor] = useState("#000000");
+  const [mousePressed, setMousePressed] = useState(false);
+  const [strokeHover, setStrokeHover] = useState(false);
   const [elements, setElements, undo, redo] = useElementState([]);
   const [iconsClickedState, setIconsClickedState] = useState([
     true,
@@ -30,14 +35,13 @@ export default function Canvas() {
   ]);
   const [action, setAction] = useState("none");
   const [selectedElement, setSelectedElement] = useState(null);
-  const width = window.innerWidth * 0.98;
-  const height = window.innerHeight * 0.95;
+  const [socket, setSocket] = useState();
 
   useEffect(() => {
     const canvas = canvasRef.current;
 
-    canvas.width = window.innerWidth * 0.98;
-    canvas.height = window.innerHeight * 0.95;
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
 
     const context = canvas.getContext("2d");
     context.lineWidth = strokeWidth;
@@ -45,46 +49,24 @@ export default function Canvas() {
     contextRef.current = context;
   }, [strokeWidth]);
 
-  //for resizing the canvas
   useEffect(() => {
-    if (!canvasRef || !canvasRef.current || !contextRef || !contextRef.current)
-      return;
+    const s = io("http://localhost:3001");
+    setSocket(s);
 
-    //creating a new canvas element and context for saving in memory
-    const inMemCanvas = document.createElement("canvas");
-    const inMemCtx = inMemCanvas.getContext("2d");
+    return () => {
+      s.disconnect();
+    };
+  }, []);
 
-    inMemCanvas.width = canvasRef.current.width;
-    inMemCanvas.height = canvasRef.current.height;
+  useEffect(() => {
+    if (socket == null || socket === undefined) return;
 
-    //saving the new canvas in memory as image
-    inMemCtx.drawImage(canvasRef.current, 0, 0);
-
-    const canvas = canvasRef.current;
-    canvas.width = window.innerWidth * 0.98;
-    canvas.height = window.innerHeight * 0.95;
-
-    const dx = canvas.width - inMemCanvas.width;
-    const dy = canvas.height - inMemCanvas.height;
-
-    contextRef.current.lineWidth = strokeWidth;
-
-    if (dx > 0) {
-      contextRef.current.drawImage(
-        inMemCanvas,
-        dx > 0 ? dx / 2 : 0,
-        dy > 0 ? dy / 2 : 0
-      );
-    } else {
-      contextRef.current.drawImage(
-        inMemCanvas,
-        0,
-        0,
-        canvas.width,
-        canvas.height
-      );
-    }
-  }, [width, height, strokeWidth]);
+    socket.on("get-elements-change", (data) => {
+      if (data !== null) {
+        setElements(data);
+      }
+    });
+  }, [socket]);
 
   //for rendering all elements present in elements array
   useLayoutEffect(() => {
@@ -107,33 +89,27 @@ export default function Canvas() {
 
     for (let element of elements) {
       contextRef.current.beginPath();
-
+      contextRef.current.lineWidth = element.strokeWidth;
       switch (element.type) {
         case "pen":
-          // contextRef.current.lineCap = "round";
-          // contextRef.current.moveTo(element.points[0].x, element.points[0].y);
-          // for (let i = 1; i < element.points.length; ++i) {
-          //   contextRef.current.lineTo(element.points[i].x, element.points[i].y);
-          // }
           const stroke = getStroke(element.points, {
-            size: 5,
+            size: element.strokeWidth + 3,
             thinning: 0.5,
             smoothing: 0.5,
-            streamline: 0.5,
+            streamline: 0.55,
           });
+          contextRef.current.fillStyle = element.strokeColor;
           const pathData = getSvgPathFromStroke(stroke);
           contextRef.current.fill(new Path2D(pathData));
           break;
-        case "eraser":
-          // contextRef.current.moveTo(element.x1, element.y1);
-          // contextRef.current.lineTo(element.x2, element.y2);
-          break;
         case "line":
           contextRef.current.lineCap = "butt";
+          contextRef.current.strokeStyle = element.strokeColor;
           contextRef.current.moveTo(element.x1, element.y1);
           contextRef.current.lineTo(element.x2, element.y2);
           break;
         case "rectangle":
+          contextRef.current.strokeStyle = element.strokeColor;
           contextRef.current.lineCap = "butt";
           contextRef.current.strokeRect(
             element.x1,
@@ -152,6 +128,8 @@ export default function Canvas() {
 
   useEffect(() => {
     const undoRedoFunction = (event) => {
+      event.preventDefault();
+
       if (event.ctrlKey) {
         if (event.key === "z") {
           undo();
@@ -166,7 +144,23 @@ export default function Canvas() {
     };
   }, [undo, redo]);
 
+  useEffect(() => {
+    const mouseDown = () => setMousePressed(true);
+    const mouseUp = () => setMousePressed(false);
+
+    document.querySelector("canvas").addEventListener("mousedown", mouseDown);
+    document.querySelector("canvas").addEventListener("mouseup", mouseUp);
+
+    return () => {
+      document
+        .querySelector("canvas")
+        .removeEventListener("mousedown", mouseDown);
+      document.querySelector("canvas").removeEventListener("mouseup", mouseUp);
+    };
+  }, []);
+
   const onMouseDownHandler = (e) => {
+    e.preventDefault();
     const { clientX, clientY } = e;
     const boundingRect = canvasRef.current.getBoundingClientRect();
 
@@ -174,6 +168,18 @@ export default function Canvas() {
     const mouseX = clientX - boundingRect.left;
     const mouseY = clientY - boundingRect.top;
 
+    if (selectedMode === "eraser") {
+      const eraElement = getElementAtCursor(mouseX, mouseY, elements);
+      if (eraElement && eraElement.position === "inside") {
+        const newElements = elements.filter(
+          (element) => element.id !== eraElement.id
+        );
+        setElements(newElements);
+
+        socket.emit("elements-change", newElements);
+      }
+      return;
+    }
     if (selectedMode === "select") {
       //getting the element at the position of cursor
       const element = getElementAtCursor(mouseX, mouseY, elements);
@@ -208,6 +214,8 @@ export default function Canvas() {
         id: elements.length,
         points: [{ x: mouseX, y: mouseY }],
         type: selectedMode,
+        strokeColor: strokeColor,
+        strokeWidth: strokeWidth,
       };
     } else {
       element = {
@@ -215,26 +223,43 @@ export default function Canvas() {
         x1: mouseX,
         y1: mouseY,
         type: selectedMode,
+        strokeColor: strokeColor,
+        strokeWidth: strokeWidth,
       };
     }
+
     //adding new element in the elements array
     setElements([...elements, element]);
-    // setSelectedElement(element);
+    setSelectedElement(element);
     setAction("drawing");
   };
 
   const onMouseMoveHandler = (e) => {
+    e.preventDefault();
     const { clientX, clientY } = e;
     const boundingRect = canvasRef.current.getBoundingClientRect();
-    const x = clientX - boundingRect.left;
-    const y = clientY - boundingRect.top;
+    const mouseX = clientX - boundingRect.left;
+    const mouseY = clientY - boundingRect.top;
+
+    if (selectedMode === "eraser" && mousePressed) {
+      const eraElement = getElementAtCursor(mouseX, mouseY, elements);
+      if (eraElement && eraElement.position === "inside") {
+        const newElements = elements.filter(
+          (element) => element.id !== eraElement.id
+        );
+        setElements(newElements);
+
+        socket.emit("elements-change", newElements);
+      }
+      return;
+    }
 
     //if user not drawing or element is not moving
+    const element = getElementAtCursor(mouseX, mouseY, elements);
     if (action === "none") {
-      if (selectedMode === "select") {
-        //changing the cursor if user is not drawing and is in select mode
-        const element = getElementAtCursor(x, y, elements);
-        console.log(element);
+      if (selectedMode === "eraser") {
+        e.target.style.cursor = element ? "pointer" : "default";
+      } else if (selectedMode === "select") {
         e.target.style.cursor = element
           ? getCursorForAction(element.position)
           : "default";
@@ -244,13 +269,12 @@ export default function Canvas() {
 
     if (action === "drawing") {
       const id = elements.length - 1;
-      updateElement({ id: id, x2: x, y2: y });
+      updateElement({ id: id, x2: mouseX, y2: mouseY });
     } else if (action === "moving") {
-      // const element = getElementAtCursor(x, y, elements);
       if (selectedElement.type === "pen") {
         const newPoints = selectedElement.points.map((_, index) => ({
-          x: x - selectedElement.xOffsets[index],
-          y: y - selectedElement.yOffsets[index],
+          x: mouseX - selectedElement.xOffsets[index],
+          y: mouseY - selectedElement.yOffsets[index],
         }));
         const elementsCopy = [...elements];
         elementsCopy[selectedElement.id] = {
@@ -277,8 +301,8 @@ export default function Canvas() {
       //comes here if action === "resizing"
       const { id, type, position, ...coordinates } = selectedElement;
       const { x1, y1, x2, y2 } = getResizedCoordinates(
-        x,
-        y,
+        mouseX,
+        mouseY,
         position,
         coordinates
       );
@@ -287,6 +311,7 @@ export default function Canvas() {
   };
 
   const onMouseUpHandler = (e) => {
+    e.preventDefault();
     if (selectedElement === null) {
       setAction("none");
       return;
@@ -300,6 +325,7 @@ export default function Canvas() {
       const { x1, y1, x2, y2 } = adjustElementCoordinates(elements[index]);
       updateElement({ id, x1, y1, x2, y2, type });
     }
+    socket.emit("elements-change", elements);
     setSelectedElement(null);
     setAction("none");
   };
@@ -353,6 +379,36 @@ export default function Canvas() {
     }
   };
 
+  const onWidthClickHandler = (e, width) => {
+    e.preventDefault();
+    setStrokeWidth(width);
+    setStrokeHover(false);
+  };
+
+  const strokeColorsArray = [
+    { name: "black", value: "#000000" },
+    { name: "pink", value: "#e91e63" },
+    { name: "yellow", value: "#ffc107" },
+    { name: "blue", value: "#00bcd4" },
+    { name: "peach", value: "#FF677D" },
+  ];
+
+  const colorComp = strokeColorsArray.map((color) => {
+    return (
+      <div
+        key={color.value}
+        onClick={() => setStrokeColor(color.value)}
+        className={[
+          `color ${color.name}`,
+          strokeColor === color.value ? "selected_color" : null,
+        ].join(" ")}
+      ></div>
+    );
+  });
+
+  const strokeWidthArray = Array(19)
+    .fill()
+    .map((_, idx) => 2 + idx);
   return (
     <>
       <canvas
@@ -362,7 +418,41 @@ export default function Canvas() {
         onMouseMove={onMouseMoveHandler}
       ></canvas>
 
-      <div className="options_container">
+      <div
+        className="options_container"
+        onMouseLeave={() => setStrokeHover(false)}
+      >
+        <div className="color_container">{colorComp}</div>
+        <div className="stroke_menu_container">
+          <div
+            className="svg_icon stroke"
+            onMouseOver={() => setStrokeHover(true)}
+          >
+            <Stroke />
+          </div>
+          <div
+            className={[
+              "stroke_menu_wrapper",
+              strokeHover ? "show" : null,
+            ].join(" ")}
+            onMouseOver={() => setStrokeHover(true)}
+            onMouseLeave={() => setStrokeHover(false)}
+          >
+            <ul className="stroke_width_menu">
+              {strokeWidthArray.map((num) => {
+                return (
+                  <li
+                    key={num}
+                    className="stroke_menu_option"
+                    onClick={(e) => onWidthClickHandler(e, num)}
+                  >
+                    <span>{num}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        </div>
         <div
           className={
             iconsClickedState[0] ? "svg_icon pen click" : "svg_icon pen"
