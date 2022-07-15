@@ -49,7 +49,7 @@ export default function Canvas() {
 	}, [strokeWidth])
 
 	useEffect(() => {
-		const s = io('http://localhost:3001')
+		const s = io(process.env.REACT_APP_SERVER_URL || 'http://localhost:3001')
 		setSocket(s)
 
 		return () => {
@@ -407,7 +407,7 @@ export default function Canvas() {
 					onClick={() => changeIconStateHandler(0)}
 				>
 					<Pen
-						stroke={iconsClickedState[0] && '#fff'}
+						stroke={iconsClickedState[0] ? '#fff' : null}
 						fill={iconsClickedState[0] ? '#fff' : '#000'}
 					/>
 				</div>
@@ -416,7 +416,7 @@ export default function Canvas() {
 					className={iconsClickedState[1] ? 'svg_icon eraser click' : 'svg_icon eraser'}
 					onClick={() => changeIconStateHandler(1)}
 				>
-					<Eraser stroke={iconsClickedState[1] && '#fff'} />
+					<Eraser stroke={iconsClickedState[1] ? '#fff' : null} />
 				</div>
 
 				<div className='stroke_menu_container'>
@@ -471,7 +471,7 @@ export default function Canvas() {
 				>
 					<Selection
 						color={iconsClickedState[4] ? '#fff' : '#000'}
-						stroke={iconsClickedState[4] && '#fff'}
+						stroke={iconsClickedState[4] ? '#fff' : null}
 						fill={iconsClickedState[4] ? '#fff' : '#000'}
 					/>
 				</div>
