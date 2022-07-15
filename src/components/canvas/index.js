@@ -360,6 +360,11 @@ export default function Canvas() {
 		}
 	}
 
+	const clearCanvas = (e) => {
+		e.preventDefault()
+		setElements([])
+	}
+
 	const onWidthOptionClickHandler = (e, width) => {
 		e.preventDefault()
 		setStrokeWidth(width)
@@ -393,12 +398,19 @@ export default function Canvas() {
 
 	return (
 		<>
+			<strong className='heading'>Drawboard</strong>
 			<canvas
 				ref={canvasRef}
 				onMouseDown={onMouseDownHandler}
 				onMouseUp={onMouseUpHandler}
 				onMouseMove={onMouseMoveHandler}
 			></canvas>
+
+			<div className='canvas_options'>
+				<span onClick={undo}>Undo</span>
+				<span onClick={redo}>Redo</span>
+				<span onClick={clearCanvas}>Clear</span>
+			</div>
 
 			<div className='options_container' onMouseLeave={() => setStrokeHover(false)}>
 				<div className='color_container'>{colorComp}</div>

@@ -1,5 +1,16 @@
+.heading {
+	position: fixed;
+	font-size: 1rem;
+	top: 0;
+	z-index: 120;
+	left: 50%;
+	transform: translateX(-50%);
+	padding: 0.5em;
+	background-color: #fff;
+}
+
 canvas {
-	background-color: #fdfdfd;
+	background-color: #fefefe;
 	opacity: 0.8;
 	background-image: radial-gradient(#7e7eff 0.75px, transparent 0.75px),
 		radial-gradient(#7878f1 0.75px, #fdfdfd 0.75px);
@@ -9,6 +20,23 @@ canvas {
 	height: 100vh;
 }
 
+.canvas_options {
+	position: fixed;
+	bottom: 5px;
+	right: 0;
+	display: flex;
+	flex-direction: row;
+	justify-content: space-around;
+	gap: 2.5em;
+	margin-right: 2.6em;
+	font-weight: 600;
+	background-color: #fff;
+}
+
+.canvas_options span {
+	cursor: pointer;
+}
+
 .options_container {
 	display: flex;
 	flex-direction: column;
@@ -16,9 +44,8 @@ canvas {
 	position: absolute;
 	left: 0;
 	top: 15%;
-	background-color: rgba(255, 255, 255, 0.666);
+	background-color: rgb(255, 255, 255);
 	padding: 0.5em 0.5em;
-	/* box-shadow: 0 0 5px 0 #00000080; */
 	border-radius: 10px;
 	box-shadow: 0px 0px 4px -4px rgb(0 0 0 / 16%), 0px 0px 20px 0px rgb(0 0 0 / 8%);
 }
