@@ -357,6 +357,7 @@ export default function Canvas() {
 
 	const clearCanvas = (e) => {
 		e.preventDefault()
+		socket.emit('elements-change', [])
 		setElements([])
 	}
 
