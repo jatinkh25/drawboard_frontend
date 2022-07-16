@@ -1,3 +1,5 @@
+import Swal from 'sweetalert2'
+
 export const getDistance = (a, b) => Math.sqrt(Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2))
 
 export const isPointOnLine = (x1, y1, x2, y2, x, y, maxDistance = 1) => {
@@ -120,4 +122,9 @@ export const getSvgPathFromStroke = (stroke) => {
 
 	d.push('Z')
 	return d.join(' ')
+}
+
+export const copyLinkToClipboard = () => {
+	navigator.clipboard.writeText(window.location.href)
+	Swal.fire('Congratulations!', 'The link of your Document has been copied!!', 'success')
 }

@@ -50,6 +50,19 @@ canvas {
 	box-shadow: 0px 0px 4px -4px rgb(0 0 0 / 16%), 0px 0px 20px 0px rgb(0 0 0 / 8%);
 }
 
+.options_container .share_icon_container {
+	background-color: #0a458e;
+	border-radius: 50%;
+	width: 35px;
+	height: 35px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	margin-left: auto;
+	margin-right: auto;
+	cursor: pointer;
+}
+
 .options_container .color_container {
 	display: flex;
 	flex-direction: column;
@@ -101,6 +114,21 @@ canvas {
 	align-items: center;
 	justify-content: center;
 	border-radius: 10px;
+}
+
+.hover_text_container {
+	display: none;
+	position: absolute;
+	left: 65px;
+	background-color: #fff;
+	border-radius: 5px;
+	padding: 7px 10px;
+	box-shadow: 0px 0px 4px -4px rgb(0 0 0 / 16%), 0px 0px 20px 0px rgb(0 0 0 / 8%);
+	width: max-content;
+}
+
+.show {
+	display: block;
 }
 
 .stroke_menu_wrapper {

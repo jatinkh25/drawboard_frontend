@@ -1,13 +1,7 @@
-// image credits @https://iconscout.com/icons & @https://www.onlinewebfonts.com/icon
 import React, { useRef, useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { getStroke } from 'perfect-freehand'
-import { ReactComponent as Eraser } from '../../assets/eraser.svg'
-import { ReactComponent as Pen } from '../../assets/pen.svg'
-import { ReactComponent as Rectangle } from '../../assets/rectangle.svg'
-import { ReactComponent as Selection } from '../../assets/selection.svg'
-import { ReactComponent as Line } from '../../assets/line.svg'
-import { ReactComponent as Stroke } from '../../assets/stroke.svg'
+import { Eraser, Line, Pen, Rectangle, Selection, Share, Stroke } from '../svg'
 import {
 	getElementAtCursor,
 	getCursorForAction,
@@ -15,12 +9,12 @@ import {
 	adjustElementCoordinates,
 	adjustmentRequired,
 	getSvgPathFromStroke,
+	copyLinkToClipboard,
 } from '../../utils'
 import { io } from 'socket.io-client'
 import { useElementState } from '../../hooks/use-element-state'
 import './styles.css'
 
-//webrtc
 export default function Canvas() {
 	const canvasRef = useRef(null)
 	const contextRef = useRef(null)
@@ -28,7 +22,8 @@ export default function Canvas() {
 	const [strokeWidth, setStrokeWidth] = useState(3)
 	const [strokeColor, setStrokeColor] = useState('#000000')
 	const [mousePressed, setMousePressed] = useState(false)
-	const [strokeHover, setStrokeHover] = useState(false)
+	const [hoveredOptionId, setHoveredOptionId] = useState(null)
+	const [showStrokeMenu, setShowStrokeMenu] = useState(false)
 	const [elements, setElements, undo, redo] = useElementState([])
 	const [iconsClickedState, setIconsClickedState] = useState([true, ...Array(4).fill(false)])
 	const [action, setAction] = useState('none')
@@ -36,6 +31,7 @@ export default function Canvas() {
 	const [socket, setSocket] = useState()
 	const { id: documentId } = useParams()
 
+	//useEffect for setting up canvas
 	useEffect(() => {
 		const canvas = canvasRef.current
 
@@ -57,10 +53,9 @@ export default function Canvas() {
 		}
 	}, [])
 
-	//
+	//getting the document from server when new user get connected to the room
 	useEffect(() => {
 		if (socket == null || socket === undefined) return
-
 		socket.emit('get-room', documentId)
 
 		socket.on('load-document', (data) => {
@@ -68,6 +63,7 @@ export default function Canvas() {
 		})
 	}, [socket, documentId])
 
+	//getting changes of other users connected on the same room
 	useEffect(() => {
 		if (socket == null) return
 		const handleChange = (data) => {
@@ -122,7 +118,6 @@ export default function Canvas() {
 				default:
 					throw new Error('Selected Option not identified.')
 			}
-
 			contextRef.current.stroke()
 		}
 	}, [elements, strokeWidth])
@@ -335,10 +330,10 @@ export default function Canvas() {
 	}
 
 	const changeIconStateHandler = (idx) => {
+		setShowStrokeMenu(false)
 		const iconStateArr = Array(iconsClickedState.length).fill(false)
 		iconStateArr[idx] = true
 		setIconsClickedState(iconStateArr)
-
 		switch (idx) {
 			case 0:
 				setSelectedMode('pen')
@@ -368,7 +363,7 @@ export default function Canvas() {
 	const onWidthOptionClickHandler = (e, width) => {
 		e.preventDefault()
 		setStrokeWidth(width)
-		setStrokeHover(false)
+		setShowStrokeMenu(false)
 	}
 
 	const strokeColorsArray = [
@@ -412,34 +407,71 @@ export default function Canvas() {
 				<span onClick={clearCanvas}>Clear</span>
 			</div>
 
-			<div className='options_container' onMouseLeave={() => setStrokeHover(false)}>
+			<div className='options_container' onMouseLeave={() => setShowStrokeMenu(false)}>
+				<div
+					className='share_icon_container'
+					onClick={copyLinkToClipboard}
+					onMouseEnter={() => setHoveredOptionId(0)}
+					onMouseLeave={() => setHoveredOptionId(null)}
+				>
+					<Share fill='#fff' />
+					<div
+						className={['hover_text_container', hoveredOptionId === 0 ? 'show' : null].join(' ')}
+					>
+						<span>Share</span>
+					</div>
+				</div>
 				<div className='color_container'>{colorComp}</div>
 				<div
 					className={iconsClickedState[0] ? 'svg_icon pen click' : 'svg_icon pen'}
 					onClick={() => changeIconStateHandler(0)}
+					onMouseEnter={() => setHoveredOptionId(1)}
+					onMouseLeave={() => setHoveredOptionId(null)}
 				>
 					<Pen
 						stroke={iconsClickedState[0] ? '#fff' : null}
 						fill={iconsClickedState[0] ? '#fff' : '#000'}
 					/>
+					<div
+						className={['hover_text_container', hoveredOptionId === 1 ? 'show' : null].join(' ')}
+					>
+						<span>Pen</span>
+					</div>
 				</div>
 
 				<div
 					className={iconsClickedState[1] ? 'svg_icon eraser click' : 'svg_icon eraser'}
 					onClick={() => changeIconStateHandler(1)}
+					onMouseEnter={() => setHoveredOptionId(2)}
+					onMouseLeave={() => setHoveredOptionId(null)}
 				>
-					<Eraser stroke={iconsClickedState[1] ? '#fff' : null} />
+					<Eraser stroke={iconsClickedState[1] ? '#fff' : null} hoverText='Eraser' />
+					<div
+						className={['hover_text_container', hoveredOptionId === 2 ? 'show' : null].join(' ')}
+					>
+						<span>Eraser</span>
+					</div>
 				</div>
 
 				<div className='stroke_menu_container'>
-					<div className='svg_icon stroke' onMouseOver={() => setStrokeHover(true)}>
+					<div
+						className='svg_icon stroke'
+						onClick={() => setShowStrokeMenu(true)}
+						onMouseEnter={() => setHoveredOptionId(3)}
+						onMouseLeave={() => setHoveredOptionId(null)}
+					>
 						<Stroke />
+						<div
+							className={['hover_text_container', hoveredOptionId === 3 ? 'show' : null].join(' ')}
+						>
+							<span>Stroke Width</span>
+						</div>
 					</div>
 
 					<div
-						className={['stroke_menu_wrapper', strokeHover && 'show'].join(' ')}
-						onMouseOver={() => setStrokeHover(true)}
-						onMouseLeave={() => setStrokeHover(false)}
+						className={['stroke_menu_wrapper', showStrokeMenu && 'show'].join(' ')}
+						onMouseOver={() => setShowStrokeMenu(true)}
+						onMouseLeave={() => setShowStrokeMenu(false)}
 					>
 						<ul className='stroke_width_menu'>
 							{strokeWidthArray.map((num) => {
@@ -463,29 +495,50 @@ export default function Canvas() {
 				<div
 					className={iconsClickedState[2] ? 'svg_icon line click' : 'svg_icon line'}
 					onClick={() => changeIconStateHandler(2)}
+					onMouseEnter={() => setHoveredOptionId(4)}
+					onMouseLeave={() => setHoveredOptionId(null)}
 				>
 					<Line fill={iconsClickedState[2] ? '#fff' : '#000'} />
+					<div
+						className={['hover_text_container', hoveredOptionId === 4 ? 'show' : null].join(' ')}
+					>
+						<span>Line</span>
+					</div>
 				</div>
 
 				<div
 					className={iconsClickedState[3] ? 'svg_icon rectangle click' : 'svg_icon rectangle'}
 					onClick={() => changeIconStateHandler(3)}
+					onMouseEnter={() => setHoveredOptionId(5)}
+					onMouseLeave={() => setHoveredOptionId(null)}
 				>
 					<Rectangle
 						stroke={iconsClickedState[3] ? '#fff' : '#000'}
 						fill={iconsClickedState[3] ? '#fff' : '#000'}
 					/>
+					<div
+						className={['hover_text_container', hoveredOptionId === 5 ? 'show' : null].join(' ')}
+					>
+						<span>Rectangle</span>
+					</div>
 				</div>
 
 				<div
 					className={iconsClickedState[4] ? 'svg_icon select click' : 'svg_icon select'}
 					onClick={() => changeIconStateHandler(4)}
+					onMouseEnter={() => setHoveredOptionId(6)}
+					onMouseLeave={() => setHoveredOptionId(null)}
 				>
 					<Selection
 						color={iconsClickedState[4] ? '#fff' : '#000'}
 						stroke={iconsClickedState[4] ? '#fff' : null}
 						fill={iconsClickedState[4] ? '#fff' : '#000'}
 					/>
+					<div
+						className={['hover_text_container', hoveredOptionId === 6 ? 'show' : null].join(' ')}
+					>
+						<span>Select</span>
+					</div>
 				</div>
 			</div>
 		</>
