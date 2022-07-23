@@ -1,70 +1,61 @@
-# Getting Started with Create React App
+# Drawboard
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+## Introduction
 
-## Available Scripts
+[Drawboard](https://drawboardapp.netlify.app) is a collaborative digital drawing and notes taking web application which helps people across the globe to connect and exchange information via this platform.
 
-In the project directory, you can run:
+It is not simply a drawing software but it also has a feature to share your drawings and other work that you draw on the canvas with other people across the globe in real time.
 
-### `yarn dev`
+## How To Use
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+To clone and run this application you'll need [Git](https://git-scm.com), [NodeJS](https://nodejs.org/en) and [Yarn](https://yarnpkg.com) installed on your system. Commands to run after installing these dependencies :
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+```bash
+# Clone this repository
+$ git clone https://github.com/jatinkh25/drawboard_frontend
 
-### `yarn test`
+# Go to the repository folder
+$ cd drawboard_frontend
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+# Install dependencies
+$ yarn install
 
-### `yarn build`
+# Run the app
+$ yarn dev
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## Key Technologies
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+### Frontend
 
-### `yarn eject`
+- Drawboard is made using [ReactJS](https://reactjs.org) as a frontend framework. ( actually a library ).
+- It uses the HTML [Canvas](https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API) element for providing the canvas/whiteboard for drawing various shapes and other things on it.
+- It uses [Socket.IO](https://socket.io) library both in frontend and backend for real time transmission of data between users on the same link.
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+### Backend
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+- Backend of Drawboard is made using [ExpressJS]() as a backend framework.
+- It uses [MongoDB](https://www.mongodb.com) as a database management system for storing the information of elements present on the canvas.
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+## Key Features
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+Users can :
 
-## Learn More
+1. Do freehand drawing as well as draw elements such as lines and rectangles.
+2. Change color and width of stroke of the drawing.
+3. Resize and change position of elements after drawing using 'Select' option.
+4. Undo and Redo their changes done on the canvas.
+5. Collaborate with other people and exchange information between users on same link in real time.
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+For smooth and rich drawing experience Drawboard uses [`perfect-freehand`](https://www.npmjs.com/package/perfect-freehand) package.
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## Credits
 
-### Code Splitting
+1. Icon Credits - [Icons8](https://icons8.com/)
+2. Color Credits - [Pigment Plate](https://pigmentplate.web.app)
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+## Future Plans
 
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `yarn build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+- Include Authentication for users.
+- Attach documents to user accounts.
