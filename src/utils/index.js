@@ -166,5 +166,11 @@ export const getSvgPathFromStroke = (stroke) => {
 
 export const copyLinkToClipboard = () => {
 	navigator.clipboard.writeText(window.location.href)
-	Swal.fire('Congratulations!', 'The link of your Document has been copied!!', 'success')
+	Swal.fire({
+		title: 'Congratulations!',
+		html:
+			'The link of your Document has been copied!!' +
+			'<br>Share this link with others to let them view the document.',
+		icon: 'success',
+	})
 }
