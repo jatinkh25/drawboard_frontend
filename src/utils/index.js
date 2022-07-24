@@ -1,5 +1,21 @@
 import Swal from 'sweetalert2'
 
+export const calculateOffset = (element, mouseCoordinates) => {
+	switch (element.type) {
+		case 'pen':
+			const xOffsets = element.points.map((point) => mouseCoordinates.x - point.x)
+			const yOffsets = element.points.map((point) => mouseCoordinates.y - point.y)
+			return { xOffset: xOffsets, yOffset: yOffsets }
+		case 'line':
+		case 'rectangle':
+			const xOffset = mouseCoordinates.x - element.x1
+			const yOffset = mouseCoordinates.y - element.y1
+			return { xOffset, yOffset }
+		default:
+			throw new Error(`Type not recognised: ${element.type}`)
+	}
+}
+
 export const getDistance = (a, b) => Math.sqrt(Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2))
 
 export const isPointOnLine = (x1, y1, x2, y2, x, y, maxDistance = 1) => {
@@ -56,7 +72,7 @@ export const getElementAtCursor = (x, y, elements) => {
 		.find((element) => element.position !== null)
 }
 
-export const getCursorForAction = (position) => {
+export const getCursorType = (position) => {
 	switch (position) {
 		case 'tl':
 		case 'br':
@@ -69,6 +85,30 @@ export const getCursorForAction = (position) => {
 		default:
 			return 'move'
 	}
+}
+
+export const getUpdatedElements = (elements, element) => {
+	const newElements = [...elements]
+
+	const elementId = element.elementId
+	let elementIndex = elements.findIndex((element) => element.elementId === elementId)
+
+	const updatedElement = { ...newElements[elementIndex], ...element }
+	const { x2, y2, type } = updatedElement
+
+	switch (type) {
+		case 'line':
+		case 'rectangle':
+			newElements[elementIndex] = updatedElement
+			break
+		case 'pen':
+			newElements[elementIndex].points = [...newElements[elementIndex].points, { x: x2, y: y2 }]
+			break
+		default:
+			throw new Error('Selected Option not identified.')
+	}
+
+	return newElements
 }
 
 export const getResizedCoordinates = (mouseX, mouseY, position, coordinates) => {
@@ -106,7 +146,7 @@ export const adjustElementCoordinates = (element) => {
 	}
 }
 
-export const adjustmentRequired = (type) => type === 'line' || type === 'rectangle'
+export const isAdjustmentRequired = (type) => type === 'line' || type === 'rectangle'
 
 export const getSvgPathFromStroke = (stroke) => {
 	if (!stroke.length) return ''
