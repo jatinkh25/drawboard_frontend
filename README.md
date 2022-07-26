@@ -17,6 +17,9 @@ $ git clone https://github.com/jatinkh25/drawboard_frontend
 # Go to the repository folder
 $ cd drawboard_frontend
 
+# Create .env.dev file in the root folder
+# Add "REACT_APP_SERVER_URL = http://localhost:3001/" to the file excluding inverted commas.
+
 # Install dependencies
 $ yarn install
 
@@ -25,11 +28,13 @@ $ yarn dev
 
 ```
 
+To completely run the application, you also need to run the backend server locally. Link to backend repo is given below.
+
 ## Key Technologies
 
 ### Frontend
 
-- Drawboard is made using [ReactJS](https://reactjs.org) as a frontend framework. ( actually a library ).
+- Drawboard is made using [ReactJS](https://reactjs.org) as a frontend framework ( actually a library ).
 - It uses the HTML [Canvas](https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API) element for providing the canvas/whiteboard for drawing various shapes and other things on it.
 - It uses [Socket.IO](https://socket.io) library both in frontend and backend for real time transmission of data between users on the same link.
 
@@ -37,6 +42,8 @@ $ yarn dev
 
 - Backend of Drawboard is made using [ExpressJS]() as a backend framework.
 - It uses [MongoDB](https://www.mongodb.com) as a database management system for storing the information of elements present on the canvas.
+
+[Backend Repo Link]( https://github.com/jatinkh25/drawboard_backend )
 
 ## Key Features
 
