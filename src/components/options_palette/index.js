@@ -1,7 +1,8 @@
-import React, { useState, useContext } from 'react'
+import React, { useState, useContext, useRef } from 'react'
 import { copyLinkToClipboard } from '../../utils'
 import CanvasContext from '../../context/canvas-context'
 import { Eraser, Line, Pen, Rectangle, Selection, Share, Stroke, Background } from '../svg'
+import useOnOutsideClick from '../../hooks/useOnOutsideClick'
 import './styles.css'
 
 const OptionsPalette = () => {
@@ -16,9 +17,14 @@ const OptionsPalette = () => {
 		setSelectedBackground,
 	} = useContext(CanvasContext)
 
-	const [hoveredOptionId, setHoveredOptionId] = useState(null)
 	const [showStrokeMenu, setShowStrokeMenu] = useState(false)
 	const [showBackgroundMenu, setShowBackgroundMenu] = useState(false)
+
+	const backgroundOptionsRef = useRef(null)
+	const strokeMenuRef = useRef(null)
+
+	useOnOutsideClick(backgroundOptionsRef, () => setShowBackgroundMenu(false))
+	useOnOutsideClick(strokeMenuRef, () => setShowStrokeMenu(false))
 
 	const changeIconStateHandler = (mode) => {
 		setShowStrokeMenu(false)
@@ -29,6 +35,12 @@ const OptionsPalette = () => {
 		e.preventDefault()
 		setStrokeWidth(width)
 		setShowStrokeMenu(false)
+	}
+
+	const onBackgroundOptionClickHandler = (e, classname) => {
+		e.preventDefault()
+		setSelectedBackground(classname)
+		setShowBackgroundMenu(false)
 	}
 
 	const strokeColorsArray = [
@@ -66,15 +78,10 @@ const OptionsPalette = () => {
 		.map((_, idx) => 1 + idx)
 
 	return (
-		<div className='options_container' onMouseLeave={() => setShowStrokeMenu(false)}>
-			<div
-				className='share_icon_container'
-				onClick={copyLinkToClipboard}
-				onMouseEnter={() => setHoveredOptionId(0)}
-				onMouseLeave={() => setHoveredOptionId(null)}
-			>
+		<div className='options_container'>
+			<div className='share_icon_container' onClick={copyLinkToClipboard}>
 				<Share fill='#fff' />
-				<div className={['hover_text_container', hoveredOptionId === 0 ? 'show' : null].join(' ')}>
+				<div className={'hover_text_container'} id={0}>
 					<span>Share</span>
 				</div>
 			</div>
@@ -82,25 +89,19 @@ const OptionsPalette = () => {
 			<div className='color_container'>{colorComp}</div>
 
 			<div className='bg_options_container'>
-				<div className={['hover_text_container', hoveredOptionId === 1 ? 'show' : null].join(' ')}>
-					<span>Background Options</span>
+				<div className='bg_option_icon' onClick={() => setShowBackgroundMenu(true)}>
+					<Background />
 				</div>
 
-				<div
-					className='bg_option_icon'
-					onMouseEnter={() => setHoveredOptionId(1)}
-					onMouseLeave={() => setHoveredOptionId(null)}
-					onClick={() => setShowBackgroundMenu(true)}
-				>
-					<Background />
+				<div className='hover_text_container' id={1}>
+					<span>Background Options</span>
 				</div>
 
 				<div
 					className={['background_options_menu', showBackgroundMenu && 'show_bg_options_menu'].join(
 						' '
 					)}
-					onMouseOver={() => setShowBackgroundMenu(true)}
-					onMouseLeave={() => setShowBackgroundMenu(false)}
+					ref={backgroundOptionsRef}
 				>
 					{backgroundOptionsArray.map((option) => {
 						return (
@@ -110,7 +111,8 @@ const OptionsPalette = () => {
 									'bg_option',
 									selectedBackground === option.classname ? 'selected_background' : null,
 								].join(' ')}
-								onClick={() => setSelectedBackground(option.classname)}
+								onClick={(e) => onBackgroundOptionClickHandler(e, option.classname)}
+								onMouseOver={() => setSelectedBackground(option.classname)}
 							>
 								<p>{option.name}</p>
 							</div>
@@ -122,11 +124,9 @@ const OptionsPalette = () => {
 			<div
 				className={selectedMode === 'pen' ? 'svg_icon pen click' : 'svg_icon pen'}
 				onClick={() => changeIconStateHandler('pen')}
-				onMouseEnter={() => setHoveredOptionId(2)}
-				onMouseLeave={() => setHoveredOptionId(null)}
 			>
 				<Pen fill={selectedMode === 'pen' ? '#fff' : '#000'} />
-				<div className={['hover_text_container', hoveredOptionId === 2 ? 'show' : null].join(' ')}>
+				<div className='hover_text_container' id='2'>
 					<span>Pen</span>
 				</div>
 			</div>
@@ -134,34 +134,24 @@ const OptionsPalette = () => {
 			<div
 				className={selectedMode === 'eraser' ? 'svg_icon eraser click' : 'svg_icon eraser'}
 				onClick={() => changeIconStateHandler('eraser')}
-				onMouseEnter={() => setHoveredOptionId(3)}
-				onMouseLeave={() => setHoveredOptionId(null)}
 			>
 				<Eraser stroke={selectedMode === 'eraser' ? '#fff' : null} hoverText='Eraser' />
-				<div className={['hover_text_container', hoveredOptionId === 3 ? 'show' : null].join(' ')}>
+				<div className='hover_text_container' id='3'>
 					<span>Eraser</span>
 				</div>
 			</div>
 
 			<div className='stroke_menu_container'>
-				<div
-					className='svg_icon stroke'
-					onClick={() => setShowStrokeMenu(true)}
-					onMouseEnter={() => setHoveredOptionId(4)}
-					onMouseLeave={() => setHoveredOptionId(null)}
-				>
+				<div className='svg_icon stroke' onClick={() => setShowStrokeMenu(true)}>
 					<Stroke />
-					<div
-						className={['hover_text_container', hoveredOptionId === 4 ? 'show' : null].join(' ')}
-					>
+					<div className='hover_text_container' id='4'>
 						<span>Stroke Width</span>
 					</div>
 				</div>
 
 				<div
 					className={['stroke_menu_wrapper', showStrokeMenu && 'show'].join(' ')}
-					onMouseOver={() => setShowStrokeMenu(true)}
-					onMouseLeave={() => setShowStrokeMenu(false)}
+					ref={strokeMenuRef}
 				>
 					<ul className='stroke_width_menu'>
 						{strokeWidthArray.map((num) => {
@@ -185,11 +175,9 @@ const OptionsPalette = () => {
 			<div
 				className={selectedMode === 'line' ? 'svg_icon line click' : 'svg_icon line'}
 				onClick={() => changeIconStateHandler('line')}
-				onMouseEnter={() => setHoveredOptionId(5)}
-				onMouseLeave={() => setHoveredOptionId(null)}
 			>
 				<Line fill={selectedMode === 'line' ? '#fff' : '#000'} />
-				<div className={['hover_text_container', hoveredOptionId === 5 ? 'show' : null].join(' ')}>
+				<div className='hover_text_container' id='5'>
 					<span>Line</span>
 				</div>
 			</div>
@@ -197,14 +185,12 @@ const OptionsPalette = () => {
 			<div
 				className={selectedMode === 'rectangle' ? 'svg_icon rectangle click' : 'svg_icon rectangle'}
 				onClick={() => changeIconStateHandler('rectangle')}
-				onMouseEnter={() => setHoveredOptionId(6)}
-				onMouseLeave={() => setHoveredOptionId(null)}
 			>
 				<Rectangle
 					stroke={selectedMode === 'rectangle' ? '#fff' : '#000'}
 					fill={selectedMode === 'rectangle' ? '#fff' : '#000'}
 				/>
-				<div className={['hover_text_container', hoveredOptionId === 6 ? 'show' : null].join(' ')}>
+				<div className='hover_text_container' id='6'>
 					<span>Rectangle</span>
 				</div>
 			</div>
@@ -212,11 +198,9 @@ const OptionsPalette = () => {
 			<div
 				className={selectedMode === 'select' ? 'svg_icon select click' : 'svg_icon select'}
 				onClick={() => changeIconStateHandler('select')}
-				onMouseEnter={() => setHoveredOptionId(7)}
-				onMouseLeave={() => setHoveredOptionId(null)}
 			>
 				<Selection fill={selectedMode === 'select' ? '#fff' : '#000'} />
-				<div className={['hover_text_container', hoveredOptionId === 7 ? 'show' : null].join(' ')}>
+				<div className='hover_text_container' id='7'>
 					<span>Select</span>
 				</div>
 			</div>
