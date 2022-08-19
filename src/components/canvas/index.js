@@ -14,7 +14,7 @@ import {
 } from '../../utils'
 import { io } from 'socket.io-client'
 import CanvasContext from '../../context/canvas-context'
-import { useElementState } from '../../hooks/use-element-state'
+import useElementState from '../../hooks/useElementState'
 import './styles.css'
 
 export default function Canvas() {

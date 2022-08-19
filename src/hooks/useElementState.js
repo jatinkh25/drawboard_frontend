@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-export const useElementState = (initialState) => {
+const useElementState = (initialState) => {
 	const [index, setIndex] = useState(0)
 	const [history, setHistory] = useState([initialState])
 
@@ -23,3 +23,5 @@ export const useElementState = (initialState) => {
 
 	return [history[index], setState, undo, redo]
 }
+
+export default useElementState
