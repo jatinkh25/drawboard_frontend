@@ -91,10 +91,9 @@ const OptionsPalette = () => {
 			<div className='bg_options_container'>
 				<div className='bg_option_icon' onClick={() => setShowBackgroundMenu(true)}>
 					<Background />
-				</div>
-
-				<div className='hover_text_container' id={1}>
-					<span>Background Options</span>
+					<div className='hover_text_container' id={1}>
+						<span>Background Options</span>
+					</div>
 				</div>
 
 				<div
@@ -142,34 +141,32 @@ const OptionsPalette = () => {
 			</div>
 
 			<div className='stroke_menu_container'>
-				<div className='svg_icon stroke' onClick={() => setShowStrokeMenu(true)}>
+				<div className='svg_icon stroke' onClick={() => setShowStrokeMenu(!showStrokeMenu)}>
 					<Stroke />
 					<div className='hover_text_container' id='4'>
 						<span>Stroke Width</span>
 					</div>
 				</div>
 
-				<div
-					className={['stroke_menu_wrapper', showStrokeMenu && 'show'].join(' ')}
+				<ul
+					className={['stroke_width_menu', showStrokeMenu ? 'show' : ''].join(' ')}
 					ref={strokeMenuRef}
 				>
-					<ul className='stroke_width_menu'>
-						{strokeWidthArray.map((num) => {
-							return (
-								<li
-									key={num}
-									className={[
-										'stroke_menu_option',
-										strokeWidth === num && 'selected_menu_option',
-									].join(' ')}
-									onClick={(e) => onWidthOptionClickHandler(e, num)}
-								>
-									<span>{num}</span>
-								</li>
-							)
-						})}
-					</ul>
-				</div>
+					{strokeWidthArray.map((num) => {
+						return (
+							<li
+								key={num}
+								className={[
+									'stroke_menu_option',
+									strokeWidth === num && 'selected_menu_option',
+								].join(' ')}
+								onClick={(e) => onWidthOptionClickHandler(e, num)}
+							>
+								<span>{num}</span>
+							</li>
+						)
+					})}
+				</ul>
 			</div>
 
 			<div
