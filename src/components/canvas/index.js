@@ -53,10 +53,10 @@ export default function Canvas() {
 		socket.emit('get-room', documentId)
 
 		socket.on('load-document', (data) => {
+			if (isLoading) setIsLoading(false)
 			setElements(data)
 		})
 
-		if (isLoading) setIsLoading(false)
 	}, [socket, documentId])
 
 	// useEffect for setting up canvas
