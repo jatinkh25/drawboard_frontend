@@ -9,6 +9,10 @@
 	background-color: #fff;
 }
 
+.loading{
+	position: fixed;
+}
+
 .canvas {
 	background-color: #fefefe;
 	box-shadow: 0 5px 10px rgba(110, 110, 112, 0.5), 0 15px 40px rgba(119, 120, 122, 0.2);
