@@ -21,6 +21,7 @@ export default function Canvas() {
 	const canvasRef = useRef(null)
 	const contextRef = useRef(null)
 	const [socket, setSocket] = useState()
+	const [isLoading, setIsLoading] = useState(false)
 
 	const [elements, setElements, undo, redo] = useElementState([])
 	const {
@@ -36,20 +37,8 @@ export default function Canvas() {
 
 	const { id: documentId } = useParams()
 
-	// useEffect for setting up canvas
 	useEffect(() => {
-		const canvas = canvasRef.current
-
-		canvas.width = window.innerWidth
-		canvas.height = window.innerHeight
-
-		const context = canvas.getContext('2d')
-		context.lineWidth = strokeWidth
-		context.lineCap = 'round'
-		contextRef.current = context
-	}, [strokeWidth])
-
-	useEffect(() => {
+		setIsLoading(true)
 		const s = io(process.env.REACT_APP_SERVER_URL || 'http://localhost:3001')
 		setSocket(s)
 
@@ -66,7 +55,22 @@ export default function Canvas() {
 		socket.on('load-document', (data) => {
 			setElements(data)
 		})
+
+		if (isLoading) setIsLoading(false)
 	}, [socket, documentId])
+
+	// useEffect for setting up canvas
+	useEffect(() => {
+		const canvas = canvasRef.current
+
+		canvas.width = window.innerWidth
+		canvas.height = window.innerHeight
+
+		const context = canvas.getContext('2d')
+		context.lineWidth = strokeWidth
+		context.lineCap = 'round'
+		contextRef.current = context
+	}, [strokeWidth])
 
 	// getting changes of other users connected on the same room
 	useEffect(() => {
@@ -158,6 +162,7 @@ export default function Canvas() {
 
 	const onMouseDownHandler = (e) => {
 		e.preventDefault()
+		if (isLoading) return
 
 		const { clientX, clientY } = e
 		const boundingRect = canvasRef.current.getBoundingClientRect()
@@ -228,6 +233,7 @@ export default function Canvas() {
 
 	const onMouseMoveHandler = (e) => {
 		e.preventDefault()
+		if (isLoading) return
 
 		const { clientX, clientY } = e
 		const boundingRect = canvasRef.current.getBoundingClientRect()
@@ -321,6 +327,7 @@ export default function Canvas() {
 
 	const onMouseUpHandler = (e) => {
 		e.preventDefault()
+		if (isLoading) return
 
 		if (selectedElement === null) {
 			setAction('none')
@@ -353,6 +360,7 @@ export default function Canvas() {
 	return (
 		<>
 			<strong className='heading'>Drawboard</strong>
+			{isLoading && <p className='loading'>Loading...</p>}
 			<canvas
 				ref={canvasRef}
 				onMouseDown={onMouseDownHandler}
