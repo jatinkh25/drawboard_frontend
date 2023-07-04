@@ -66,3 +66,4 @@ For smooth and rich drawing experience Drawboard uses [`perfect-freehand`](https
 
 - Include Authentication for users.
 - Attach documents to user accounts.
+
